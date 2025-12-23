@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { login } from "@/lib/auth/client";
 
 export default function LoginPage() {
@@ -22,6 +23,34 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    // Check if setup is needed
+    async function checkSetup() {
+      try {
+        const response = await fetch("/api/auth/setup");
+        const data = await response.json();
+
+        if (data.authDisabled) {
+          // Auth is disabled, go to dashboard
+          router.replace("/");
+          return;
+        }
+
+        if (data.setupRequired) {
+          // No users exist, redirect to setup
+          router.replace("/setup");
+          return;
+        }
+      } catch (error) {
+        console.error("Failed to check setup status:", error);
+      }
+      setIsChecking(false);
+    }
+
+    checkSetup();
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +67,25 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
+  if (isChecking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1 text-center">
+            <Skeleton className="h-12 w-12 rounded-lg mx-auto mb-4" />
+            <Skeleton className="h-8 w-48 mx-auto" />
+            <Skeleton className="h-4 w-64 mx-auto" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
