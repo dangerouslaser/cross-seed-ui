@@ -295,21 +295,21 @@ export function TorrentClientsTab({ config }: TorrentClientsTabProps) {
               {clients.map((client, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-4 rounded-lg border"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg border"
                 >
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline">{getClientTypeFromUrl(client)}</Badge>
-                    <span className="font-mono text-sm">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Badge variant="outline" className="shrink-0">{getClientTypeFromUrl(client)}</Badge>
+                    <span className="font-mono text-sm truncate">
                       {client.replace(/\/\/.*:.*@/, "//***:***@")}
                     </span>
                     {testResults[client] === "success" && (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
                     )}
                     {testResults[client] === "error" && (
-                      <XCircle className="h-4 w-4 text-red-500" />
+                      <XCircle className="h-4 w-4 text-red-500 shrink-0" />
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <Button
                       variant="outline"
                       size="sm"

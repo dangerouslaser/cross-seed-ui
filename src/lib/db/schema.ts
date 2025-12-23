@@ -84,3 +84,12 @@ export const uiSettings = sqliteTable("ui_settings", {
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .$defaultFn(() => new Date()),
 });
+
+// Autobrr configuration
+export const autobrrConfig = sqliteTable("autobrr_config", {
+  id: integer("id").primaryKey().default(1),
+  url: text("url"),
+  apiKeyEncrypted: blob("api_key_encrypted"),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date()),
+});

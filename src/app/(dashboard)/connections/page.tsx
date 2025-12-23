@@ -4,10 +4,12 @@ import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TorrentClientsTab } from "@/components/connections/torrent-clients-tab";
+import { ProwlarrTab } from "@/components/connections/prowlarr-tab";
 import { IndexersTab } from "@/components/connections/indexers-tab";
 import { SonarrTab } from "@/components/connections/sonarr-tab";
 import { RadarrTab } from "@/components/connections/radarr-tab";
 import { NotificationsTab } from "@/components/connections/notifications-tab";
+import { AutobrrTab } from "@/components/connections/autobrr-tab";
 import { fetchConfig, useConfigStore } from "@/lib/stores/config";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -82,14 +84,20 @@ export default function ConnectionsPage() {
       <Tabs defaultValue="clients" className="space-y-4">
         <TabsList>
           <TabsTrigger value="clients">Torrent Clients</TabsTrigger>
-          <TabsTrigger value="indexers">Indexers</TabsTrigger>
+          <TabsTrigger value="prowlarr">Prowlarr</TabsTrigger>
+          <TabsTrigger value="indexers">Manual Indexers</TabsTrigger>
           <TabsTrigger value="sonarr">Sonarr</TabsTrigger>
           <TabsTrigger value="radarr">Radarr</TabsTrigger>
+          <TabsTrigger value="autobrr">autobrr</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
         </TabsList>
 
         <TabsContent value="clients">
           <TorrentClientsTab config={config} />
+        </TabsContent>
+
+        <TabsContent value="prowlarr">
+          <ProwlarrTab />
         </TabsContent>
 
         <TabsContent value="indexers">
@@ -102,6 +110,10 @@ export default function ConnectionsPage() {
 
         <TabsContent value="radarr">
           <RadarrTab config={config} />
+        </TabsContent>
+
+        <TabsContent value="autobrr">
+          <AutobrrTab />
         </TabsContent>
 
         <TabsContent value="notifications">

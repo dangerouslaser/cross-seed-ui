@@ -6,6 +6,24 @@ const testRequestSchema = z.object({
   url: z.string(),
 });
 
+// Detect client type from URL pattern
+function detectClientType(url: string): "qbittorrent" | "rtorrent" | "transmission" | "deluge" | "unknown" {
+  const lowerUrl = url.toLowerCase();
+  if (lowerUrl.includes("qbittorrent://") || lowerUrl.includes(":8080")) {
+    return "qbittorrent";
+  }
+  if (lowerUrl.includes("rtorrent://") || lowerUrl.includes("/rtorrent") || lowerUrl.includes("/rutorrent") || lowerUrl.includes("/rpc") || lowerUrl.includes("/plugins/httprpc")) {
+    return "rtorrent";
+  }
+  if (lowerUrl.includes("transmission://") || lowerUrl.includes(":9091") || lowerUrl.includes("/transmission")) {
+    return "transmission";
+  }
+  if (lowerUrl.includes("deluge://") || lowerUrl.includes(":8112") || lowerUrl.includes("/json")) {
+    return "deluge";
+  }
+  return "unknown";
+}
+
 async function testQBittorrent(url: string): Promise<{ success: boolean; error?: string; version?: string }> {
   try {
     // Parse URL to extract credentials
@@ -37,6 +55,187 @@ async function testQBittorrent(url: string): Promise<{ success: boolean; error?:
     if (versionRes.ok) {
       const version = await versionRes.text();
       return { success: true, version };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Connection failed",
+    };
+  }
+}
+
+async function testRTorrent(url: string): Promise<{ success: boolean; error?: string; version?: string }> {
+  try {
+    // Parse URL to extract credentials
+    const parsed = new URL(url.replace("rtorrent://", "http://"));
+    const baseUrl = `${parsed.protocol}//${parsed.host}${parsed.pathname}`;
+    const username = parsed.username || "";
+    const password = parsed.password || "";
+
+    // rTorrent uses XML-RPC, send a simple system.listMethods request
+    const xmlRequest = `<?xml version="1.0" encoding="UTF-8"?>
+<methodCall>
+  <methodName>system.client_version</methodName>
+</methodCall>`;
+
+    const headers: Record<string, string> = {
+      "Content-Type": "text/xml",
+    };
+
+    if (username && password) {
+      headers["Authorization"] = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
+    }
+
+    const response = await fetch(baseUrl, {
+      method: "POST",
+      headers,
+      body: xmlRequest,
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return { success: false, error: "Authentication failed" };
+      }
+      return { success: false, error: `HTTP ${response.status}` };
+    }
+
+    const responseText = await response.text();
+
+    // Extract version from XML response
+    const versionMatch = responseText.match(/<value><string>([^<]+)<\/string><\/value>/);
+    const version = versionMatch ? versionMatch[1] : undefined;
+
+    return { success: true, version };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Connection failed",
+    };
+  }
+}
+
+async function testTransmission(url: string): Promise<{ success: boolean; error?: string; version?: string }> {
+  try {
+    // Parse URL to extract credentials
+    const parsed = new URL(url.replace("transmission://", "http://"));
+    const baseUrl = `${parsed.protocol}//${parsed.host}`;
+    const rpcPath = parsed.pathname || "/transmission/rpc";
+    const username = parsed.username || "";
+    const password = parsed.password || "";
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    if (username && password) {
+      headers["Authorization"] = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
+    }
+
+    // Transmission requires a session ID, first request will fail with 409 and return the session ID
+    let sessionId = "";
+
+    const firstResponse = await fetch(`${baseUrl}${rpcPath}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ method: "session-get" }),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (firstResponse.status === 409) {
+      sessionId = firstResponse.headers.get("x-transmission-session-id") || "";
+    } else if (!firstResponse.ok) {
+      if (firstResponse.status === 401) {
+        return { success: false, error: "Authentication failed" };
+      }
+      return { success: false, error: `HTTP ${firstResponse.status}` };
+    }
+
+    // If we got a session ID, make the actual request
+    if (sessionId) {
+      headers["X-Transmission-Session-Id"] = sessionId;
+
+      const response = await fetch(`${baseUrl}${rpcPath}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ method: "session-get" }),
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (!response.ok) {
+        return { success: false, error: `HTTP ${response.status}` };
+      }
+
+      const data = await response.json();
+      const version = data.arguments?.version;
+      return { success: true, version };
+    }
+
+    // First request succeeded without 409
+    const data = await firstResponse.json();
+    const version = data.arguments?.version;
+    return { success: true, version };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Connection failed",
+    };
+  }
+}
+
+async function testDeluge(url: string): Promise<{ success: boolean; error?: string; version?: string }> {
+  try {
+    // Parse URL to extract credentials
+    const parsed = new URL(url.replace("deluge://", "http://"));
+    const baseUrl = `${parsed.protocol}//${parsed.host}`;
+    const password = parsed.password || decodeURIComponent(parsed.pathname.slice(1)) || "";
+
+    // Deluge Web API endpoint
+    const jsonEndpoint = `${baseUrl}/json`;
+
+    // First, authenticate
+    const authResponse = await fetch(jsonEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        method: "auth.login",
+        params: [password],
+        id: 1,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!authResponse.ok) {
+      return { success: false, error: `HTTP ${authResponse.status}` };
+    }
+
+    const authCookie = authResponse.headers.get("set-cookie");
+    const authData = await authResponse.json();
+
+    if (!authData.result) {
+      return { success: false, error: "Authentication failed" };
+    }
+
+    // Get daemon info
+    const infoResponse = await fetch(jsonEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(authCookie ? { Cookie: authCookie } : {}),
+      },
+      body: JSON.stringify({
+        method: "daemon.info",
+        params: [],
+        id: 2,
+      }),
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (infoResponse.ok) {
+      const infoData = await infoResponse.json();
+      return { success: true, version: infoData.result };
     }
 
     return { success: true };
@@ -157,15 +356,37 @@ export async function POST(request: NextRequest) {
   let testResult: { success: boolean; error?: string; version?: string };
 
   switch (type) {
-    case "torrent-client":
+    case "torrent-client": {
       // Detect client type from URL
-      if (url.startsWith("qbittorrent://") || url.includes(":8080")) {
-        testResult = await testQBittorrent(url.replace("qbittorrent://", "http://"));
-        return NextResponse.json({ ...testResult, clientType: "qBittorrent" });
+      const clientType = detectClientType(url);
+
+      switch (clientType) {
+        case "qbittorrent":
+          testResult = await testQBittorrent(url.replace("qbittorrent://", "http://"));
+          return NextResponse.json({ ...testResult, clientType: "qBittorrent" });
+
+        case "rtorrent":
+          testResult = await testRTorrent(url);
+          return NextResponse.json({ ...testResult, clientType: "rTorrent" });
+
+        case "transmission":
+          testResult = await testTransmission(url);
+          return NextResponse.json({ ...testResult, clientType: "Transmission" });
+
+        case "deluge":
+          testResult = await testDeluge(url);
+          return NextResponse.json({ ...testResult, clientType: "Deluge" });
+
+        default:
+          // Try qBittorrent as default since it's the most common
+          testResult = await testQBittorrent(url);
+          if (testResult.success) {
+            return NextResponse.json({ ...testResult, clientType: "qBittorrent" });
+          }
+          testResult = { success: false, error: "Could not detect client type. Please ensure the URL includes a recognizable pattern." };
       }
-      // TODO: Add support for other clients
-      testResult = { success: false, error: "Unsupported client type" };
       break;
+    }
 
     case "torznab":
       testResult = await testTorznab(url);

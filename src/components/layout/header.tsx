@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useDaemonStore, checkDaemonStatus } from "@/lib/stores/daemon";
 import { useAuthStore } from "@/lib/auth/client";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export function Header() {
   const { status, version, error } = useDaemonStore();
@@ -53,16 +54,16 @@ export function Header() {
   };
 
   return (
-    <header className="flex h-14 items-center gap-4 border-b bg-background px-4">
+    <header className="flex h-14 items-center gap-2 sm:gap-4 border-b bg-background px-2 sm:px-4">
       <SidebarTrigger />
-      <Separator orientation="vertical" className="h-6" />
+      <Separator orientation="vertical" className="h-6 hidden sm:block" />
       <div className="flex-1" />
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Daemon:</span>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <span className="text-sm text-muted-foreground hidden sm:inline">Daemon:</span>
                 <Badge
                   variant={
                     status === "connected"
@@ -103,6 +104,8 @@ export function Header() {
             className={`h-4 w-4 ${status === "checking" ? "animate-spin" : ""}`}
           />
         </Button>
+
+        <ThemeToggle />
 
         <Separator orientation="vertical" className="h-6" />
 
