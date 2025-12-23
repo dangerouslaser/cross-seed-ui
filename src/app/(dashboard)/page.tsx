@@ -166,8 +166,10 @@ export default function DashboardPage() {
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              {daemonStatus.running && daemonStatus.version
-                ? `Version ${daemonStatus.version}`
+              {daemonStatus.running
+                ? daemonStatus.version
+                  ? `Version ${daemonStatus.version}`
+                  : "Daemon is running"
                 : daemonStatus.error || "Configure CROSSSEED_URL to connect"}
             </p>
           </CardContent>
