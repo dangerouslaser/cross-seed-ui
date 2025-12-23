@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  # Official cross-seed - users update this independently
+  cross-seed:
+    image: ghcr.io/cross-seed/cross-seed:latest
+    container_name: cross-seed
+    restart: unless-stopped
+    user: 1000:1000
+    volumes:
+      - ./config:/config
+      - /path/to/torrents:/torrents:ro
+      - /path/to/data:/data
+      - /path/to/links:/links
+    ports:
+      - "2468:2468"
+    command: daemon
+
+  # CrossSeed UI
+  crossseed-ui:
+    build: .
+    container_name: crossseed-ui
+    restart: unless-stopped
+    volumes:
+      # Shared config directory
+      - ./config:/config
+      # UI-specific database
+      - ./ui-data:/app/data
+    ports:
+      - "3000:3000"
+    environment:
+      - CROSSSEED_URL=http://cross-seed:2468
+      - CROSSSEED_CONFIG_PATH=/config/config.js
+      - TZ=America/New_York
+    depends_on:
+      - cross-seed
+
+volumes:
+  config:
+  ui-data:
