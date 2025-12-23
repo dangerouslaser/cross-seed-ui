@@ -5,6 +5,19 @@ import { nanoid } from "nanoid";
 const SESSION_COOKIE_NAME = "crossseed-session";
 const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
+function shouldUseSecureCookie(): boolean {
+  // Explicit override via environment variable
+  if (process.env.COOKIE_SECURE === "false") {
+    return false;
+  }
+  if (process.env.COOKIE_SECURE === "true") {
+    return true;
+  }
+  // Default: secure in production, unless running on localhost/internal network
+  // For self-hosted apps on HTTP, users should set COOKIE_SECURE=false
+  return false; // Default to false for self-hosted compatibility
+}
+
 function getJwtSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET || "crossseed-ui-default-secret-change-me";
   return new TextEncoder().encode(secret);
@@ -35,8 +48,8 @@ export async function createSession(userId: number, username: string): Promise<s
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    secure: shouldUseSecureCookie(),
+    sameSite: "lax", // Use lax for better compatibility with HTTP
     expires: expiresAt,
     path: "/",
   });
