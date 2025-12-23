@@ -10,9 +10,10 @@ import { Activity, CheckCircle, Clock, Server, ArrowRight, RefreshCw, AlertCircl
 import { CrossSeedConfig } from "@/types/config";
 
 interface DaemonStatus {
-  connected: boolean;
+  running: boolean;
   version?: string;
   error?: string;
+  configured?: boolean;
 }
 
 interface DashboardStats {
@@ -50,7 +51,7 @@ function calculateStats(config: CrossSeedConfig | null): DashboardStats {
 
 export default function DashboardPage() {
   const [config, setConfig] = useState<CrossSeedConfig | null>(null);
-  const [daemonStatus, setDaemonStatus] = useState<DaemonStatus>({ connected: false });
+  const [daemonStatus, setDaemonStatus] = useState<DaemonStatus>({ running: false });
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -70,11 +71,11 @@ export default function DashboardPage() {
         const statusData = await statusRes.json();
         setDaemonStatus(statusData);
       } else {
-        setDaemonStatus({ connected: false, error: "Could not reach daemon" });
+        setDaemonStatus({ running: false, error: "Could not reach daemon" });
       }
     } catch (error) {
       console.error("Failed to load dashboard data:", error);
-      setDaemonStatus({ connected: false, error: "Connection failed" });
+      setDaemonStatus({ running: false, error: "Connection failed" });
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -93,7 +94,7 @@ export default function DashboardPage() {
           setDaemonStatus(statusData);
         }
       } catch {
-        setDaemonStatus({ connected: false, error: "Connection failed" });
+        setDaemonStatus({ running: false, error: "Connection failed" });
       }
     }, 30000);
 
@@ -152,7 +153,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              {daemonStatus.connected ? (
+              {daemonStatus.running ? (
                 <Badge variant="default" className="bg-green-500 hover:bg-green-600">
                   <CheckCircle className="h-3 w-3 mr-1" />
                   Connected
@@ -165,7 +166,7 @@ export default function DashboardPage() {
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              {daemonStatus.connected && daemonStatus.version
+              {daemonStatus.running && daemonStatus.version
                 ? `Version ${daemonStatus.version}`
                 : daemonStatus.error || "Configure CROSSSEED_URL to connect"}
             </p>
