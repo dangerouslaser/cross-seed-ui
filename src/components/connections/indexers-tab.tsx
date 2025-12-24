@@ -30,6 +30,17 @@ interface IndexersTabProps {
   config: CrossSeedConfig;
 }
 
+// Helper to get URL from an indexer entry (can be string or object)
+type IndexerEntry = string | { url: string; apikey?: string; [key: string]: unknown };
+
+function getIndexerUrl(entry: IndexerEntry): string {
+  return typeof entry === 'string' ? entry : entry.url;
+}
+
+function getIndexerKey(entry: IndexerEntry): string {
+  return getIndexerUrl(entry);
+}
+
 export function IndexersTab({ config }: IndexersTabProps) {
   const { updateConfig } = useConfigStore();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -40,7 +51,7 @@ export function IndexersTab({ config }: IndexersTabProps) {
   const [newIndexerUrl, setNewIndexerUrl] = useState("");
   const [newIndexerName, setNewIndexerName] = useState("");
 
-  const indexers = config.torznab || [];
+  const indexers = (config.torznab || []) as IndexerEntry[];
 
   const handleAddIndexer = async () => {
     if (!newIndexerUrl) {
@@ -101,13 +112,19 @@ export function IndexersTab({ config }: IndexersTabProps) {
     }
   };
 
-  const getIndexerName = (url: string): string => {
+  const getIndexerName = (entry: IndexerEntry): string => {
     try {
+      const url = getIndexerUrl(entry);
       const parsed = new URL(url);
       return parsed.hostname;
     } catch {
       return "Unknown";
     }
+  };
+
+  const getDisplayUrl = (entry: IndexerEntry): string => {
+    const url = getIndexerUrl(entry);
+    return url.replace(/apikey=[^&]+/, "apikey=***");
   };
 
   return (
@@ -173,48 +190,52 @@ export function IndexersTab({ config }: IndexersTabProps) {
             </div>
           ) : (
             <div className="space-y-3">
-              {indexers.map((indexer, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-4 rounded-lg border"
-                >
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline">Torznab</Badge>
-                    <span className="font-medium">{getIndexerName(indexer)}</span>
-                    <span className="font-mono text-xs text-muted-foreground truncate max-w-md">
-                      {indexer.replace(/apikey=[^&]+/, "apikey=***")}
-                    </span>
-                    {testResults[indexer] === "success" && (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                    )}
-                    {testResults[indexer] === "error" && (
-                      <XCircle className="h-4 w-4 text-red-500" />
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleTestIndexer(indexer)}
-                      disabled={testingIndexer === indexer}
-                    >
-                      {testingIndexer === indexer ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <TestTube className="h-4 w-4" />
+              {indexers.map((indexer, index) => {
+                const key = getIndexerKey(indexer);
+                const url = getIndexerUrl(indexer);
+                return (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-4 rounded-lg border"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline">Torznab</Badge>
+                      <span className="font-medium">{getIndexerName(indexer)}</span>
+                      <span className="font-mono text-xs text-muted-foreground truncate max-w-md">
+                        {getDisplayUrl(indexer)}
+                      </span>
+                      {testResults[key] === "success" && (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
                       )}
-                      <span className="ml-2">Test</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveIndexer(index)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                      {testResults[key] === "error" && (
+                        <XCircle className="h-4 w-4 text-red-500" />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleTestIndexer(url)}
+                        disabled={testingIndexer === url}
+                      >
+                        {testingIndexer === url ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <TestTube className="h-4 w-4" />
+                        )}
+                        <span className="ml-2">Test</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveIndexer(index)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>

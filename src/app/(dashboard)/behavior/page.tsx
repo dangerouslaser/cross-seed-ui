@@ -164,12 +164,12 @@ export default function BehaviorPage() {
                 </TooltipProvider>
               </div>
               <p className="text-sm text-muted-foreground">
-                Current: {config.delay} seconds
+                Current: {config.delay ?? 30} seconds
               </p>
             </div>
             <div className="w-48">
               <Slider
-                value={[config.delay]}
+                value={[config.delay ?? 30]}
                 min={30}
                 max={300}
                 step={10}
@@ -194,7 +194,7 @@ export default function BehaviorPage() {
               </p>
             </div>
             <Switch
-              checked={config.skipRecheck}
+              checked={config.skipRecheck ?? true}
               onCheckedChange={(checked) => handleChange("skipRecheck", checked)}
             />
           </div>
@@ -223,12 +223,12 @@ export default function BehaviorPage() {
                 </TooltipProvider>
               </div>
               <p className="text-sm text-muted-foreground">
-                Current: {formatBytes(config.autoResumeMaxDownload)}
+                Current: {formatBytes(config.autoResumeMaxDownload ?? 52428800)}
               </p>
             </div>
             <div className="w-48">
               <Slider
-                value={[config.autoResumeMaxDownload / (1024 * 1024)]}
+                value={[(config.autoResumeMaxDownload ?? 52428800) / (1024 * 1024)]}
                 min={0}
                 max={50}
                 step={1}
@@ -245,7 +245,7 @@ export default function BehaviorPage() {
               </p>
             </div>
             <Switch
-              checked={config.ignoreNonRelevantFilesToResume}
+              checked={config.ignoreNonRelevantFilesToResume ?? false}
               onCheckedChange={(checked) =>
                 handleChange("ignoreNonRelevantFilesToResume", checked)
               }
@@ -268,7 +268,7 @@ export default function BehaviorPage() {
               </p>
             </div>
             <Switch
-              checked={config.duplicateCategories}
+              checked={config.duplicateCategories ?? false}
               onCheckedChange={(checked) => handleChange("duplicateCategories", checked)}
             />
           </div>

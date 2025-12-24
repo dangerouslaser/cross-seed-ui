@@ -173,12 +173,12 @@ export default function MatchingPage() {
                   </TooltipProvider>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Current: {(config.fuzzySizeThreshold * 100).toFixed(1)}%
+                  Current: {((config.fuzzySizeThreshold ?? 0.02) * 100).toFixed(1)}%
                 </p>
               </div>
               <div className="w-48">
                 <Slider
-                  value={[config.fuzzySizeThreshold * 100]}
+                  value={[(config.fuzzySizeThreshold ?? 0.02) * 100]}
                   min={1}
                   max={10}
                   step={0.5}
@@ -206,7 +206,7 @@ export default function MatchingPage() {
               </p>
             </div>
             <Switch
-              checked={config.includeSingleEpisodes}
+              checked={config.includeSingleEpisodes ?? false}
               onCheckedChange={(checked) => handleChange("includeSingleEpisodes", checked)}
             />
           </div>
@@ -219,7 +219,7 @@ export default function MatchingPage() {
               </p>
             </div>
             <Switch
-              checked={config.includeNonVideos}
+              checked={config.includeNonVideos ?? false}
               onCheckedChange={(checked) => handleChange("includeNonVideos", checked)}
             />
           </div>

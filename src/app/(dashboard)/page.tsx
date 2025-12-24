@@ -38,10 +38,10 @@ function calculateStats(config: CrossSeedConfig | null): DashboardStats {
   }
 
   return {
-    torrentClients: config.torrentClients?.length || 0,
-    indexers: config.torznab?.length || 0,
-    sonarrInstances: config.sonarr?.length || 0,
-    radarrInstances: config.radarr?.length || 0,
+    torrentClients: Array.isArray(config.torrentClients) ? config.torrentClients.length : 0,
+    indexers: Array.isArray(config.torznab) ? config.torznab.length : 0,
+    sonarrInstances: Array.isArray(config.sonarr) ? config.sonarr.length : 0,
+    radarrInstances: Array.isArray(config.radarr) ? config.radarr.length : 0,
     searchCadence: config.searchCadence,
     rssCadence: config.rssCadence,
     action: config.action,
@@ -64,7 +64,7 @@ export default function DashboardPage() {
 
       if (configRes.ok) {
         const configData = await configRes.json();
-        setConfig(configData);
+        setConfig(configData.config || configData);
       }
 
       if (statusRes.ok) {
@@ -335,7 +335,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
                 <div className="flex items-start gap-4">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-background">
-                    {config?.dataDirs?.length ? (
+                    {Array.isArray(config?.dataDirs) && config.dataDirs.length > 0 ? (
                       <CheckCircle className="h-4 w-4 text-green-500" />
                     ) : (
                       "3"
@@ -344,7 +344,7 @@ export default function DashboardPage() {
                   <div>
                     <p className="font-medium">Configure Paths</p>
                     <p className="text-sm text-muted-foreground">
-                      {config?.dataDirs?.length
+                      {Array.isArray(config?.dataDirs) && config.dataDirs.length > 0
                         ? `${config.dataDirs.length} data directory(s) configured`
                         : "Set up data directories and linking options"}
                     </p>

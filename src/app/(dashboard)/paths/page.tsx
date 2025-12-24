@@ -188,12 +188,12 @@ export default function PathsPage() {
                 </TooltipProvider>
               </div>
               <p className="text-sm text-muted-foreground">
-                Current: {config.maxDataDepth} levels
+                Current: {config.maxDataDepth ?? 2} levels
               </p>
             </div>
             <div className="w-48">
               <Slider
-                value={[config.maxDataDepth]}
+                value={[config.maxDataDepth ?? 2]}
                 min={1}
                 max={10}
                 step={1}
@@ -288,12 +288,12 @@ export default function PathsPage() {
               </p>
             </div>
             <Switch
-              checked={config.flatLinking}
+              checked={config.flatLinking ?? false}
               onCheckedChange={(checked) => handleChange("flatLinking", checked)}
             />
           </div>
 
-          {config.flatLinking && (
+          {(config.flatLinking ?? false) && (
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>

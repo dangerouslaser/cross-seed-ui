@@ -30,6 +30,17 @@ interface RadarrTabProps {
   config: CrossSeedConfig;
 }
 
+// Helper for arr instance entries (can be string URL or object)
+type ArrInstanceEntry = string | { url?: string; apikey?: string; [key: string]: unknown };
+
+function getInstanceUrl(entry: ArrInstanceEntry): string {
+  return typeof entry === 'string' ? entry : (entry.url || '');
+}
+
+function getInstanceKey(entry: ArrInstanceEntry): string {
+  return getInstanceUrl(entry);
+}
+
 export function RadarrTab({ config }: RadarrTabProps) {
   const { updateConfig } = useConfigStore();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -40,7 +51,7 @@ export function RadarrTab({ config }: RadarrTabProps) {
   const [newUrl, setNewUrl] = useState("");
   const [newApiKey, setNewApiKey] = useState("");
 
-  const instances = config.radarr || [];
+  const instances = (config.radarr || []) as ArrInstanceEntry[];
 
   const handleAddInstance = async () => {
     if (!newUrl || !newApiKey) {
@@ -102,13 +113,19 @@ export function RadarrTab({ config }: RadarrTabProps) {
     }
   };
 
-  const getInstanceName = (url: string): string => {
+  const getInstanceName = (entry: ArrInstanceEntry): string => {
     try {
+      const url = getInstanceUrl(entry);
       const parsed = new URL(url.split("?")[0]);
       return parsed.hostname;
     } catch {
       return "Unknown";
     }
+  };
+
+  const getDisplayUrl = (entry: ArrInstanceEntry): string => {
+    const url = getInstanceUrl(entry);
+    return url.replace(/apikey=[^&]+/, "apikey=***");
   };
 
   return (
@@ -174,48 +191,52 @@ export function RadarrTab({ config }: RadarrTabProps) {
           </div>
         ) : (
           <div className="space-y-3">
-            {instances.map((instance, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-4 rounded-lg border"
-              >
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline">Radarr</Badge>
-                  <span className="font-medium">{getInstanceName(instance)}</span>
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {instance.replace(/apikey=[^&]+/, "apikey=***")}
-                  </span>
-                  {testResults[instance] === "success" && (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  )}
-                  {testResults[instance] === "error" && (
-                    <XCircle className="h-4 w-4 text-red-500" />
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleTestInstance(instance)}
-                    disabled={testingInstance === instance}
-                  >
-                    {testingInstance === instance ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <TestTube className="h-4 w-4" />
+            {instances.map((instance, index) => {
+              const key = getInstanceKey(instance);
+              const url = getInstanceUrl(instance);
+              return (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-4 rounded-lg border"
+                >
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline">Radarr</Badge>
+                    <span className="font-medium">{getInstanceName(instance)}</span>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {getDisplayUrl(instance)}
+                    </span>
+                    {testResults[key] === "success" && (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
                     )}
-                    <span className="ml-2">Test</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveInstance(index)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                    {testResults[key] === "error" && (
+                      <XCircle className="h-4 w-4 text-red-500" />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleTestInstance(url)}
+                      disabled={testingInstance === url}
+                    >
+                      {testingInstance === url ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <TestTube className="h-4 w-4" />
+                      )}
+                      <span className="ml-2">Test</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveInstance(index)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </CardContent>

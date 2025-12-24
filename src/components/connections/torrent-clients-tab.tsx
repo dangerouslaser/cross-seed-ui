@@ -88,6 +88,50 @@ function buildClientUrl(
   return `${type}://${auth}${host}:${port}`;
 }
 
+// Helper for torrent client entries (can be string URL or object)
+type ClientEntry = string | { type?: string; baseUrl?: string; url?: string; [key: string]: unknown };
+
+function getClientUrl(entry: ClientEntry): string {
+  if (typeof entry === 'string') return entry;
+  return entry.baseUrl || entry.url || '';
+}
+
+function getClientKey(entry: ClientEntry): string {
+  return getClientUrl(entry);
+}
+
+function getClientTypeFromEntry(entry: ClientEntry): string {
+  if (typeof entry === 'string') {
+    return getClientTypeFromUrl(entry);
+  }
+  if (entry.type) return entry.type;
+  const url = getClientUrl(entry);
+  return getClientTypeFromUrl(url);
+}
+
+function getClientTypeFromUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    const protocol = parsed.protocol.replace(":", "");
+    if (["qbittorrent", "rtorrent", "transmission", "deluge"].includes(protocol)) {
+      return protocol;
+    }
+    // Fallback to detecting from URL
+    if (url.includes("qbittorrent")) return "qBittorrent";
+    if (url.includes("rtorrent")) return "rTorrent";
+    if (url.includes("transmission")) return "Transmission";
+    if (url.includes("deluge")) return "Deluge";
+    return "Unknown";
+  } catch {
+    return "Unknown";
+  }
+}
+
+function getDisplayUrl(entry: ClientEntry): string {
+  const url = getClientUrl(entry);
+  return url.replace(/\/\/.*:.*@/, "//***:***@");
+}
+
 export function TorrentClientsTab({ config }: TorrentClientsTabProps) {
   const { updateConfig } = useConfigStore();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -101,7 +145,7 @@ export function TorrentClientsTab({ config }: TorrentClientsTabProps) {
   const [newClientUsername, setNewClientUsername] = useState("");
   const [newClientPassword, setNewClientPassword] = useState("");
 
-  const clients = config.torrentClients || [];
+  const clients = (config.torrentClients || []) as ClientEntry[];
 
   const handleAddClient = async () => {
     if (!newClientHost) {
@@ -292,47 +336,51 @@ export function TorrentClientsTab({ config }: TorrentClientsTabProps) {
             </div>
           ) : (
             <div className="space-y-3">
-              {clients.map((client, index) => (
-                <div
-                  key={index}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg border"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Badge variant="outline" className="shrink-0">{getClientTypeFromUrl(client)}</Badge>
-                    <span className="font-mono text-sm truncate">
-                      {client.replace(/\/\/.*:.*@/, "//***:***@")}
-                    </span>
-                    {testResults[client] === "success" && (
-                      <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
-                    )}
-                    {testResults[client] === "error" && (
-                      <XCircle className="h-4 w-4 text-red-500 shrink-0" />
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleTestClient(client)}
-                      disabled={testingClient === client}
-                    >
-                      {testingClient === client ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <TestTube className="h-4 w-4" />
+              {clients.map((client, index) => {
+                const key = getClientKey(client);
+                const url = getClientUrl(client);
+                return (
+                  <div
+                    key={index}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg border"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Badge variant="outline" className="shrink-0">{getClientTypeFromEntry(client)}</Badge>
+                      <span className="font-mono text-sm truncate">
+                        {getDisplayUrl(client)}
+                      </span>
+                      {testResults[key] === "success" && (
+                        <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
                       )}
-                      <span className="ml-2">Test</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveClient(index)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                      {testResults[key] === "error" && (
+                        <XCircle className="h-4 w-4 text-red-500 shrink-0" />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleTestClient(url)}
+                        disabled={testingClient === url}
+                      >
+                        {testingClient === url ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <TestTube className="h-4 w-4" />
+                        )}
+                        <span className="ml-2">Test</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveClient(index)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
@@ -354,7 +402,7 @@ export function TorrentClientsTab({ config }: TorrentClientsTabProps) {
               </p>
             </div>
             <Switch
-              checked={config.useClientTorrents}
+              checked={config.useClientTorrents ?? true}
               onCheckedChange={async (checked) => {
                 const result = await updateConfigPartial({ useClientTorrents: checked });
                 if (result.success) {

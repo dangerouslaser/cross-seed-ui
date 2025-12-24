@@ -64,9 +64,11 @@ export async function POST(request: NextRequest) {
 
     // Get existing manual indexers (not from Prowlarr)
     const prowlarrUrlPattern = new RegExp(`^${prowlarrConfig.url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/\\d+/api`);
-    const manualIndexers = (config.torznab || []).filter(
-      (url) => !prowlarrUrlPattern.test(url)
-    );
+    const manualIndexers = (config.torznab || []).filter((entry) => {
+      // Handle both string URLs and object entries
+      const url = typeof entry === 'string' ? entry : entry.url;
+      return !prowlarrUrlPattern.test(url);
+    });
 
     // Combine manual indexers with new Prowlarr URLs
     const newTorznab = [...manualIndexers, ...torznabUrls];
