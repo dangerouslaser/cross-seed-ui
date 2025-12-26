@@ -2,7 +2,7 @@
 
 A web-based graphical interface for managing [cross-seed](https://github.com/cross-seed/cross-seed) installations. Configure all options, manage integrations, and monitor your cross-seeding activity without manually editing `config.js`.
 
-![Dashboard Screenshot](docs/dashboard.png)
+## THIS SOFTWARE IS IN DEVELOPMENT. BACKUP YOUR EXISTING CROSS-SEED CONFIGURATION BEFORE TESTING
 
 ## Features
 
